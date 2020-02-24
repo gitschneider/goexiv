@@ -60,6 +60,23 @@ func (i *Image) GetExifData() *ExifData {
 	return makeExifData(i, C.exiv2_image_get_exif_data(i.img))
 }
 
+func (i *Image) SetExifString(key, value string) error {
+	return i.SetMetadataString("exif", key, value)
+}
+
+func (d *ExifData) GetString(key string) (string, error) {
+	datum, err := d.FindKey(key)
+	if err != nil {
+		return "", err
+	}
+
+	if datum == nil {
+		return "", errMetadataKeyNotFound
+	}
+
+	return datum.String(), nil
+}
+
 func (d *ExifData) FindKey(key string) (*ExifDatum, error) {
 	ckey := C.CString(key)
 	defer C.free(unsafe.Pointer(ckey))
@@ -83,7 +100,10 @@ func (d *ExifDatum) Key() string {
 }
 
 func (d *ExifDatum) String() string {
-	return C.GoString(C.exiv2_exif_datum_to_string(d.datum))
+	cstr := C.exiv2_exif_datum_to_string(d.datum)
+	defer C.free(unsafe.Pointer(cstr))
+
+	return C.GoString(cstr)
 }
 
 // Iterator returns a new ExifDatumIterator to iterate over all Exif data.

@@ -60,6 +60,23 @@ func (i *Image) GetIptcData() *IptcData {
 	return makeIptcData(i, C.exiv2_image_get_iptc_data(i.img))
 }
 
+func (i *Image) SetIptcString(key, value string) error {
+	return i.SetMetadataString("iptc", key, value)
+}
+
+func (d *IptcData) GetString(key string) (string, error) {
+	datum, err := d.FindKey(key)
+	if err != nil {
+		return "", err
+	}
+
+	if datum == nil {
+		return "", errMetadataKeyNotFound
+	}
+
+	return datum.String(), nil
+}
+
 func (d *IptcData) FindKey(key string) (*IptcDatum, error) {
 	ckey := C.CString(key)
 	defer C.free(unsafe.Pointer(ckey))
@@ -83,7 +100,10 @@ func (d *IptcDatum) Key() string {
 }
 
 func (d *IptcDatum) String() string {
-	return C.GoString(C.exiv2_iptc_datum_to_string(d.datum))
+	cstr := C.exiv2_iptc_datum_to_string(d.datum)
+	defer C.free(unsafe.Pointer(cstr))
+
+	return C.GoString(cstr)
 }
 
 // Iterator returns a new IptcDatumIterator to iterate over all IPTC data.
